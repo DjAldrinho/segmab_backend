@@ -34,9 +34,15 @@ export class RecordsService {
                       then: 'creado',
                       else: {
                         $cond: {
-                          if: { $eq: ['$status', 2] }, // Si el valor de "status" es 2
+                          if: { $eq: ['$status', 2] },
                           then: 'aprobado',
-                          else: 'otro',
+                          else: {
+                            $cond: {
+                              if: { $eq: ['$status', -1] },
+                              then: 'rechazado',
+                              else: 'otro',
+                            },
+                          },
                         },
                       },
                     },
@@ -46,6 +52,62 @@ export class RecordsService {
             },
           },
           { $group: { _id: '$estado', count: { $sum: 1 } } },
+          {
+            $sort: { count: -1 },
+          },
+        ])
+        .exec();
+    } catch (error) {
+      console.error('Error al realizar la consulta:', error);
+      throw error;
+    }
+  }
+
+  getRecordsGroupedByCode() {
+    try {
+      return this.recordModel
+        .aggregate([
+          {
+            $group: {
+              _id: '$codigo',
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $sort: { count: -1 },
+          },
+        ])
+        .exec();
+    } catch (error) {
+      console.error('Error al realizar la consulta:', error);
+      throw error;
+    }
+  }
+
+  getRecordsPag() {
+    try {
+      return this.recordModel
+        .aggregate([
+          {
+            $project: {
+              pagable: {
+                $cond: {
+                  if: { $eq: ['$pag', true] },
+                  then: 'pagable',
+                  else: 'no pagable',
+                },
+              },
+            },
+          },
+          {
+            $group: {
+              _id: '$pagable',
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $sort: { count: -1 },
+          },
         ])
         .exec();
     } catch (error) {
